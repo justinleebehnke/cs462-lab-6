@@ -19,16 +19,16 @@ ruleset manage_sensors {
   rule new_sensor_created {
     select when sensor new_sensor
     pre {
-      section_id = event:attr("sensor_id")
-      exists = ent:sensor >< sensor_id
+      sensor_id = event:attr("sensor_id")
+      exists = ent:sensors >< sensor_id
       eci = meta:eci
     }
     if exists then
-      send_directive("sensor_ready", {"senort_id":sensor_id})
+      send_directive("sensor_ready", {"sensor_id":sensor_id})
     notfired {
-      ent:sensor := ent:sensor.defaultsTo([]).union([section_id]);
+      ent:sensors := ent:sensors.defaultsTo([]).union([sensor_id]);
       raise wrangler event "child_creation"
-      attributes { "name": nameFromID(section_id), "color": "#ffff00" }
+      attributes { "name": nameFromID(sensor_id), "color": "#ffff00" }
     }
   }
 }
