@@ -1,6 +1,7 @@
 ruleset manage_sensors {
   meta {
-    shares __testing
+    shares __testing, sensors, temperatures
+    use module io.picolabs.wrangler alias Wrangler
   }
   global {
     nameFromID = function(sensor_id) {
@@ -9,7 +10,16 @@ ruleset manage_sensors {
     defaultThreshold = 75
     numberToNotify = 9528739729
     sensors = function() {
-      ent:sensors.defaultsTo([])
+      ent:sensors.defaultsTo({})
+    }
+    
+    temperatures = function() {
+      ent:sensors.defaultsTo({}).map(function(sensor) {
+        {
+          "sensor": sensor,
+          "temps" : Wrangler:skyQuery(sensor{"eci"},"temperature_store","temperatures")
+        }
+      })
     }
     __testing = { "queries":
       [ { "name": "__testing" }
@@ -31,7 +41,6 @@ ruleset manage_sensors {
     if exists then
       send_directive("sensor_ready", {"sensor_id":sensor_id})
     notfired {
-      ent:sensors := ent:sensors.defaultsTo([]).union([sensor_id]);
       raise wrangler event "child_creation"
       attributes { "name": nameFromID(sensor_id),
                    "color": "#ffff00",
@@ -61,6 +70,22 @@ ruleset manage_sensors {
     fired {
       ent:sensors := ent:sensors.defaultsTo({});
       ent:sensors{[sensor_id]} := the_sensor
+    }
+  }
+  
+  rule sensor_not_needed {
+    select when sensor unneeded_sensor
+    pre {
+      sensor_id = event:attr("sensor_id")
+      exists = ent:sensors >< sensor_id
+      child_to_delete = nameFromID(sensor_id)
+    }
+    if exists then
+      send_directive("deleting_sensor", {"sensor_id":sensor_id})
+    fired {
+      raise wrangler event "child_deletion"
+        attributes {"name": child_to_delete};
+      clear ent:sensors{[sensor_id]}
     }
   }
 }
