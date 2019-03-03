@@ -1,0 +1,34 @@
+ruleset manage_sensors {
+  meta {
+    shares __testing
+  }
+  global {
+    nameFromID = function(sensor_id) {
+      "Sensor " + sensor_id + " Pico"
+    }
+    __testing = { "queries":
+      [ { "name": "__testing" }
+      //, { "name": "entry", "args": [ "key" ] }
+      ] , "events":
+      [ //{ "domain": "d1", "type": "t1" }
+      //, { "domain": "d2", "type": "t2", "attrs": [ "a1", "a2" ] }
+      ]
+    }
+  }
+  
+  rule new_sensor_created {
+    select when sensor new_sensor
+    pre {
+      section_id = event:attr("sensor_id")
+      exists = ent:sensor >< sensor_id
+      eci = meta:eci
+    }
+    if exists then
+      send_directive("sensor_ready", {"senort_id":sensor_id})
+    notfired {
+      ent:sensor := ent:sensor.defaultsTo([]).union([section_id]);
+      raise wrangler event "child_creation"
+      attributes { "name": nameFromID(section_id), "color": "#ffff00" }
+    }
+  }
+}
