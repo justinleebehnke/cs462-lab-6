@@ -8,6 +8,9 @@ ruleset manage_sensors {
     }
     defaultThreshold = 75
     numberToNotify = 9528739729
+    sensors = function() {
+      ent:sensors.defaultsTo([])
+    }
     __testing = { "queries":
       [ { "name": "__testing" }
       //, { "name": "entry", "args": [ "key" ] }
