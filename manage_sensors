@@ -6,6 +6,8 @@ ruleset manage_sensors {
     nameFromID = function(sensor_id) {
       "Sensor " + sensor_id + " Pico"
     }
+    defaultThreshold = 75
+    numberToNotify = 9528739729
     __testing = { "queries":
       [ { "name": "__testing" }
       //, { "name": "entry", "args": [ "key" ] }
@@ -29,21 +31,30 @@ ruleset manage_sensors {
       ent:sensors := ent:sensors.defaultsTo([]).union([sensor_id]);
       raise wrangler event "child_creation"
       attributes { "name": nameFromID(sensor_id),
-               "color": "#ffff00",
-               "sensor_id": sensor_id,
-               "rids": ["temperature_store", "sensor_profile", "wovyn_base"] }
+                   "color": "#ffff00",
+                   "sensor_id": sensor_id,
+                   "rids": ["temperature_store", "sensor_profile", "wovyn_base"] }
     }
   }
   
   rule store_new_sensor {
-    select when wrangler child_initialized
+    select when wrangler new_child_created
     pre {
       the_sensor = {"id": event:attr("id"), "eci": event:attr("eci")}
       sensor_id = event:attr("rs_attrs"){"sensor_id"}
     }
     if sensor_id.klog("found sensor_id")
     then
-      noop()
+      event:send({ 
+        "eci": the_sensor{"eci"}, "eid": "progromatic_profile_update",
+        "domain": "sensor", "type": "profile_updated",
+        "attrs": { 
+          "sensorName": nameFromID(sensor_id),
+          "sensorLocation": "Unknown",
+          "threshold": defaultThreshold,
+          "smsNumber": numberToNotify
+        }
+       })
     fired {
       ent:sensors := ent:sensors.defaultsTo({});
       ent:sensors{[sensor_id]} := the_sensor
